@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Missions collection
+    match /missions/{missionId} {
+      allow read, write: if true;
+    }
+
+    // Targets collection
+    match /targets/{targetId} {
+      allow read, write: if true;
+    }
+
+    // AuditLogs collection
+    match /auditLogs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Leads collection
+    match /leads/{leadId} {
+      allow read, write: if true;
+    }
+  }
+}

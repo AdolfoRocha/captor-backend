@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Mission {
+  id               String    @id @default(cuid())
+  title            String
+  promptInstruction String   
+  sourceUrl        String?
+  targetLimit      Int?
+  missionType      String    @default("cliente_oculto") // cliente_oculto, captacao_leads
+  searchNiche      String?
+  searchLocation   String?
+  status           String    @default("active") // active, paused, completed
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  targets          Target[]
+}
+
+model Target {
+  id              String     @id @default(cuid())
+  name            String
+  phone           String
+  profileUrl      String?    // URL do perfil da profissional no site
+  scrapedBio      String?    
+  auditStatus     String     @default("pending") // pending, in_progress, completed, failed
+  lastInteraction DateTime?
+  missionId       String
+  mission         Mission    @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  auditLogs       AuditLog[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Lead {
+  id              String   @id @default(cuid())
+  name            String
+  phone           String
+  phoneRaw        String?
+  category        String?
+  address         String?
+  website         String?
+  rating          String?
+  reviews         String?
+  isWhatsapp      Boolean  @default(false)
+  waConfidence    String?  // high, medium, low
+  searchQuery     String   // nicho buscado
+  searchLocation  String   // localização buscada
+  imported        Boolean  @default(false) // já foi importado para alguma missão
+  createdAt       DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  targetId  String
+  target    Target   @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  role      String   // "bot" | "professional"
+  message   String   
+  timestamp DateTime @default(now())
+}
