@@ -299,9 +299,16 @@ export const firestoreGmapsApi = {
 
 
 // ─── Exported API (auto-selects based on environment) ─────────
+// ─── Exported API (auto-selects based on environment) ─────────
+const useBackend = !isProduction || !!import.meta.env.VITE_API_URL;
+
 export const missionsApi = isProduction ? firestoreMissionsApi : localMissionsApi;
 export const targetsApi = isProduction ? firestoreTargetsApi : localTargetsApi;
 export const agentApi = isProduction ? firestoreAgentApi : localAgentApi;
-export const scraperApi = isProduction ? firestoreScraperApi : localScraperApi;
-export const gmapsApi = isProduction ? firestoreGmapsApi : localGmapsApi;
+
+// For Scraper and Gmaps, we MUST use the backend (REST) if available (localhost or VITE_API_URL).
+// Only fallback to Firestore (stub) if we are in production AND have no specified backend URL.
+export const scraperApi = useBackend ? localScraperApi : firestoreScraperApi;
+export const gmapsApi = useBackend ? localGmapsApi : firestoreGmapsApi;
 export const leadsApi = isProduction ? firestoreLeadsApi : localLeadsApi;
+
