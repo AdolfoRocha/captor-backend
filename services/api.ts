@@ -3,7 +3,7 @@ import { firestoreMissionsApi, firestoreTargetsApi, firestoreAgentApi, firestore
 
 export const isProduction = import.meta.env.MODE === 'production';
 
-export const API_BASE = 'https://hfrby-35-239-48-106.a.free.pinggy.link/api';
+export const API_BASE = 'http://35.239.48.106:3001/api';
 
 // Helper for Fetch API
 const api = {
