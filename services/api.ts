@@ -363,22 +363,18 @@ export const firestoreUploadApiFallback = {
 }
 
 // ─── Exported API (auto-selects based on environment) ─────────
-const useBackend = !isProduction || !!import.meta.env.VITE_API_URL;
+const useBackend = true; // Always use backend for this deployment
 
-export const missionsApi = isProduction ? { ...firestoreMissionsApi, uploadFile: firestoreUploadApiFallback.uploadFile } : localMissionsApi;
-export const targetsApi = isProduction ? firestoreTargetsApi : localTargetsApi;
-export const agentApi = isProduction ? firestoreAgentApi : localAgentApi;
+export const missionsApi = localMissionsApi;
+export const targetsApi = localTargetsApi;
+export const agentApi = localAgentApi;
+export const leadsApi = localLeadsApi;
 
-export const scraperApi = useBackend ? localScraperApi : firestoreScraperApi;
-export const gmapsApi = useBackend ? localGmapsApi : firestoreGmapsApi;
-export const webScraperApi = useBackend ? localWebScraperApi : { start: async () => ({ success: false, jobId: '', message: 'Web Scraper disponível apenas em ambiente local', targetUrl: '' }), stop: async () => ({ success: false, stoppedCount: 0, message: 'N/A' }), getStatus: async () => ({ id: '', status: 'unavailable', output: [] as string[], error: undefined as string | undefined }) };
+export const scraperApi = localScraperApi;
+export const gmapsApi = localGmapsApi;
+export const webScraperApi = localWebScraperApi;
 
-const firestoreLeadsApiStub = {
-    ...firestoreLeadsApi,
-    importFile: async (_file: File, _groupId?: string) => ({ success: false, count: 0, totalExtracted: 0, message: 'Upload de arquivo disponível apenas em ambiente local' })
-};
-
-export const leadsApi = isProduction ? firestoreLeadsApiStub : localLeadsApi;
+// export const leadsApi = isProduction ? firestoreLeadsApiStub : localLeadsApi;
 
 // ─── Evolution API (always local) ─────────────────────────────
 export const evolutionApi = {
