@@ -3,7 +3,7 @@ import { firestoreMissionsApi, firestoreTargetsApi, firestoreAgentApi, firestore
 
 export const isProduction = import.meta.env.MODE === 'production';
 
-export const API_BASE = 'https://illustrated-labor-tribes-elephant.trycloudflare.com/api';
+export const API_BASE = 'https://a3d328327a17f4fa-35-239-48-106.serveousercontent.com/api';
 
 // Helper for Fetch API
 const api = {
