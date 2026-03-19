@@ -3,7 +3,7 @@ import { firestoreMissionsApi, firestoreTargetsApi, firestoreAgentApi, firestore
 
 export const isProduction = import.meta.env.MODE === 'production';
 
-export const API_BASE = isProduction ? 'https://inserted-alabama-heights-axis.trycloudflare.com/api' : 'http://localhost:3001/api';
+export const API_BASE = isProduction ? 'https://illustrated-labor-tribes-elephant.trycloudflare.com/api' : 'http://localhost:3001/api';
 
 // Helper for Fetch API
 const api = {
