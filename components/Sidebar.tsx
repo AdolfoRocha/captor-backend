@@ -1,7 +1,15 @@
-
 import React from 'react';
-import { LogOut, Monitor, ShieldCheck } from 'lucide-react';
-import { MENU_ITEMS } from '../constants';
+import { LogOut, Monitor, ShieldCheck, LayoutDashboard, Search, Users, Smartphone, Terminal, MessageSquare, Settings } from 'lucide-react';
+
+const MENU_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'mission', label: 'Nova Missão', icon: Search },
+  { id: 'leads', label: 'LEADS', icon: Users },
+  { id: 'whatsapp', label: 'Conexão WhatsApp', icon: Smartphone },
+  { id: 'logs', label: 'Logs em Tempo Real', icon: Terminal },
+  { id: 'results', label: 'Resultados', icon: MessageSquare },
+  { id: 'settings', label: 'Configurações', icon: Settings },
+];
 
 interface SidebarProps {
   activeView: string;
@@ -13,11 +21,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
     <div className="w-64 h-full bg-[#0f172a] border-r border-slate-800 flex flex-col fixed left-0 top-0 z-50">
       {/* Logo Section */}
       <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-rose-500 rounded-lg flex items-center justify-center shadow-lg shadow-red-900/20">
+        <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-green-500 rounded-lg flex items-center justify-center shadow-lg shadow-purple-900/20">
           <ShieldCheck className="text-white w-6 h-6" />
         </div>
         <div>
+           <h1 className="text-xl font-bold tracking-tighter text-white">
             CAPT<span className="text-green-500">OR V2.5</span>
+          </h1>
           <p className="text-[10px] text-slate-500 font-medium tracking-widest uppercase">ARX Digital Elite</p>
         </div>
       </div>
