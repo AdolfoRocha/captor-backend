@@ -3,7 +3,7 @@ import { firestoreMissionsApi, firestoreTargetsApi, firestoreAgentApi, firestore
 
 export const isProduction = import.meta.env.MODE === 'production';
 
-export const API_BASE = isProduction ? 'http://35.239.48.106:3001/api' : 'http://localhost:3001/api';
+export const API_BASE = isProduction ? 'https://stale-dancers-shout.loca.lt/api' : 'http://localhost:3001/api';
 
 // Helper for Fetch API
 const api = {
