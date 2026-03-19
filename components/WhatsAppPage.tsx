@@ -34,7 +34,11 @@ const WhatsAppPage: React.FC<WhatsAppPageProps> = ({ onBack }) => {
         try {
             const res = await fetch(`${API_BASE}/agent/start`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                mode: 'cors',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
             });
             const data = await res.json();
             if (!data.success) {
