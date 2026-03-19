@@ -17,9 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
           <ShieldCheck className="text-white w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tighter text-white">
-            CAPT<span className="text-green-500">OR</span>
-          </h1>
+            CAPT<span className="text-green-500">OR V2.5</span>
           <p className="text-[10px] text-slate-500 font-medium tracking-widest uppercase">ARX Digital Elite</p>
         </div>
       </div>
