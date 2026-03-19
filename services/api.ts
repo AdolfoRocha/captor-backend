@@ -1,90 +1,97 @@
-/**
- * Captor API Layer
- * 
- * In development (localhost), uses the local Express server.
- * In production (deployed), uses Firebase Firestore directly.
- */
 
-import {
-    firestoreMissionsApi,
-    firestoreTargetsApi,
-    firestoreAgentApi,
-    firestoreScraperApi,
-    firestoreLeadsApi,
-} from './firestore';
+import { firestoreMissionsApi, firestoreTargetsApi, firestoreAgentApi, firestoreScraperApi, firestoreLeadsApi } from './firestore';
 
-// ─── Environment Detection ───────────────────────────────────
-const isProduction = typeof window !== 'undefined' &&
-    window.location.hostname !== 'localhost' &&
-    window.location.hostname !== '127.0.0.1';
+export const isProduction = import.meta.env.MODE === 'production';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+export const API_BASE = isProduction ? 'http://35.239.48.106:3001/api' : 'http://localhost:3001/api';
 
-// ─── Types ────────────────────────────────────────────────────
-export interface Mission {
-    id: string;
-    title: string;
-    promptInstruction: string;
-    sourceUrl: string | null;
-    targetLimit: number | null;
-    missionType: string; // 'cliente_oculto' | 'captacao_leads'
-    searchNiche: string | null;
-    searchLocation: string | null;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-    _count?: { targets: number };
-}
-
-export interface Target {
-    id: string;
-    name: string;
-    phone: string;
-    scrapedBio: string | null;
-    auditStatus: string;
-    lastInteraction: string | null;
-    missionId: string;
-    mission?: { title: string };
-    _count?: { auditLogs: number };
-}
-
-export interface AuditLog {
-    id: string;
-    targetId: string;
-    role: string;
-    message: string;
-    timestamp: string;
-}
-
-export interface AgentStats {
-    pending: number;
-    inProgress: number;
-    completed: number;
-    failed: number;
-    total: number;
-}
-
-// ─── Local Express API (Development) ─────────────────────────
-const localMissionsApi = {
-    getAll: async (): Promise<Mission[]> => {
-        const res = await fetch(`${API_BASE}/missions`);
+// Helper for Fetch API
+const api = {
+    get: async <T>(url: string): Promise<T> => {
+        const res = await fetch(`${API_BASE}${url}`);
         return res.json();
     },
-
-    getById: async (id: string): Promise<Mission & { targets: Target[] }> => {
-        const res = await fetch(`${API_BASE}/missions/${id}`);
-        return res.json();
-    },
-
-    create: async (data: { title: string; promptInstruction: string; sourceUrl?: string; targetLimit?: number; missionType?: string; searchNiche?: string; searchLocation?: string }): Promise<Mission> => {
-        const res = await fetch(`${API_BASE}/missions`, {
+    post: async <T>(url: string, data: any): Promise<T> => {
+        const res = await fetch(`${API_BASE}${url}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         return res.json();
     },
+    patch: async <T>(url: string, data: any): Promise<T> => {
+        const res = await fetch(`${API_BASE}${url}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    },
+    delete: async <T>(url: string): Promise<T> => {
+        const res = await fetch(`${API_BASE}${url}`, { method: 'DELETE' });
+        return res.json();
+    }
+};
 
+export interface Mission {
+    id: string;
+    title: string;
+    promptInstruction: string;
+    useAiCopy: boolean;
+    sourceUrl?: string;
+    targetLimit?: number | null;
+    missionType: string;
+    searchNiche?: string;
+    searchLocation?: string;
+    status: string;
+    fileUrl?: string;
+    fileName?: string;
+    fileMimeType?: string;
+    agentKnowledgeBase?: string;
+    agentProductInfo?: string;
+    agentPaymentLink?: string;
+    agentSchedulingUrl?: string;
+    agentDocuments?: string;
+    cadenceConfig?: string;
+    createdAt: string;
+    updatedAt: string;
+    targets?: Target[];
+}
+
+export interface Target {
+    id: string;
+    name: string;
+    phone: string;
+    scrapedBio?: string;
+    auditStatus: string;
+    funnelStage: string;
+    retryCount: number;
+    missionId: string;
+    createdAt: string;
+}
+
+export interface AgentStats {
+    totalTargets: number;
+    processedTargets: number;
+    successRate: number;
+    activeMissions: number;
+}
+
+const localMissionsApi = {
+    getAll: async (): Promise<Mission[]> => api.get<Mission[]>('/missions'),
+    getById: async (id: string): Promise<Mission & { targets: Target[] }> => api.get<Mission & { targets: Target[] }>(`/missions/${id}`),
+    
+    uploadFile: async (file: File): Promise<{ success: boolean; fileUrl: string; fileName: string; fileMimeType: string }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`${API_BASE}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        return res.json();
+    },
+
+    create: async (data: Partial<Mission>): Promise<Mission> => api.post<Mission>('/missions', data),
     update: async (id: string, data: Partial<Mission>): Promise<Mission> => {
         const res = await fetch(`${API_BASE}/missions/${id}`, {
             method: 'PUT',
@@ -93,23 +100,24 @@ const localMissionsApi = {
         });
         return res.json();
     },
-
     delete: async (id: string): Promise<void> => {
         await fetch(`${API_BASE}/missions/${id}`, { method: 'DELETE' });
     },
-
-    finalizeScraping: async (id: string): Promise<Mission> => {
-        const res = await fetch(`${API_BASE}/missions/${id}/finalize-scraping`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        return res.json();
-    }
+    finalizeScraping: async (id: string): Promise<Mission> => api.post<Mission>(`/missions/${id}/finalize-scraping`, {})
 };
 
 const localGmapsApi = {
-    search: async (data: { missionId: string; query: string; location: string; maxResults?: number }): Promise<{ success: boolean; jobId: string; message: string; query: string; location: string; maxResults: number }> => {
+    search: async (data: { missionId?: string; groupId?: string; query: string; location: string; maxResults?: number }): Promise<{ success: boolean; jobId: string; message: string; query: string; location: string; maxResults: number }> => {
         const res = await fetch(`${API_BASE}/gmaps/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    },
+
+    estimate: async (data: { query: string; location: string }): Promise<{ estimated_total: number; estimated_wa: number; preview_names: string[]; error?: string }> => {
+        const res = await fetch(`${API_BASE}/gmaps/estimate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -137,6 +145,31 @@ const localGmapsApi = {
     }
 };
 
+const localWebScraperApi = {
+    start: async (data: { missionId?: string; url: string; prompt: string; maxResults?: number }): Promise<{ success: boolean; jobId: string; message: string; targetUrl: string }> => {
+        const res = await fetch(`${API_BASE}/webscraper/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    },
+
+    stop: async (options: { jobId?: string }): Promise<{ success: boolean; stoppedCount: number; message: string }> => {
+        const res = await fetch(`${API_BASE}/webscraper/stop`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(options)
+        });
+        return res.json();
+    },
+
+    getStatus: async (jobId: string): Promise<{ id: string; status: string; output: string[]; error?: string }> => {
+        const res = await fetch(`${API_BASE}/webscraper/status/${jobId}`);
+        return res.json();
+    }
+};
+
 const localTargetsApi = {
     getAll: async (filters?: { missionId?: string; status?: string }): Promise<Target[]> => {
         const params = new URLSearchParams();
@@ -146,7 +179,7 @@ const localTargetsApi = {
         return res.json();
     },
 
-    getById: async (id: string): Promise<Target & { auditLogs: AuditLog[] }> => {
+    getById: async (id: string): Promise<Target & { auditLogs: any[] }> => {
         const res = await fetch(`${API_BASE}/targets/${id}`);
         return res.json();
     },
@@ -184,51 +217,23 @@ const localTargetsApi = {
 };
 
 const localAgentApi = {
-    getStats: async (): Promise<AgentStats> => {
-        const res = await fetch(`${API_BASE}/agent/stats`);
-        return res.json();
-    },
-
-    getStatus: async (): Promise<{ status: string; currentAction: string; lastUpdate: string }> => {
-        const res = await fetch(`${API_BASE}/agent/status`);
-        return res.json();
-    },
-
+    getStats: async (): Promise<AgentStats> => api.get<AgentStats>('/agent/stats'),
+    getStatus: async (): Promise<{ status: string; currentAction: string; lastUpdate: string }> => api.get<{ status: string; currentAction: string; lastUpdate: string }>('/agent/status'),
     getLogs: async (since?: string): Promise<Array<{ timestamp: string; type: string; message: string }>> => {
         const params = since ? `?since=${encodeURIComponent(since)}` : '';
-        const res = await fetch(`${API_BASE}/agent/logs${params}`);
-        return res.json();
+        return api.get<Array<{ timestamp: string; type: string; message: string }>>(`/agent/logs${params}`);
     }
 };
 
 const localScraperApi = {
-    start: async (missionId: string): Promise<{ success: boolean; jobId: string; message: string; sourceUrl: string; maxTargets: number; error?: string }> => {
-        const res = await fetch(`${API_BASE}/scraper/start`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ missionId })
-        });
-        return res.json();
-    },
-
-    stop: async (options: { jobId?: string; missionId?: string }): Promise<{ success: boolean; stoppedCount: number; message: string }> => {
-        const res = await fetch(`${API_BASE}/scraper/stop`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(options)
-        });
-        return res.json();
-    },
-
-    getStatus: async (jobId: string): Promise<{ id: string; status: string; output: string[]; error?: string }> => {
-        const res = await fetch(`${API_BASE}/scraper/status/${jobId}`);
-        return res.json();
-    },
-
-    getJobs: async (missionId: string): Promise<Array<{ id: string; status: string; startedAt: string }>> => {
-        const res = await fetch(`${API_BASE}/scraper/jobs/${missionId}`);
-        return res.json();
-    }
+    start: async (missionId: string): Promise<{ success: boolean; jobId: string; message: string; sourceUrl: string; maxTargets: number; error?: string }> => 
+        api.post<{ success: boolean; jobId: string; message: string; sourceUrl: string; maxTargets: number; error?: string }>('/scraper/start', { missionId }),
+    stop: async (options: { jobId?: string; missionId?: string }): Promise<{ success: boolean; stoppedCount: number; message: string }> => 
+        api.post<{ success: boolean; stoppedCount: number; message: string }>('/scraper/stop', options),
+    getStatus: async (jobId: string): Promise<{ id: string; status: string; output: string[]; error?: string }> => 
+        api.get<{ id: string; status: string; output: string[]; error?: string }>(`/scraper/status/${jobId}`),
+    getJobs: async (missionId: string): Promise<Array<{ id: string; status: string; startedAt: string }>> => 
+        api.get<Array<{ id: string; status: string; startedAt: string }>>(`/scraper/jobs/${missionId}`)
 };
 
 // ─── Lead API (Local) ─────────────────────────────────────────
@@ -248,16 +253,25 @@ export interface Lead {
     searchQuery: string;   // nicho buscado
     searchLocation: string; // localização buscada
     imported: boolean;     // já foi importado para alguma missão
+    groupId?: string;
+    group?: LeadGroup;
     createdAt: string;
 }
 
+export interface LeadGroup {
+    id: string;
+    name: string;
+    _count?: { leads: number };
+}
+
 const localLeadsApi = {
-    getAll: async (filters?: { query?: string; location?: string; whatsappOnly?: boolean; notImported?: boolean }): Promise<Lead[]> => {
+    getAll: async (filters?: { query?: string; location?: string; whatsappOnly?: boolean; notImported?: boolean; groupId?: string }): Promise<Lead[]> => {
         const params = new URLSearchParams();
         if (filters?.query) params.append('query', filters.query);
         if (filters?.location) params.append('location', filters.location);
         if (filters?.whatsappOnly) params.append('whatsappOnly', 'true');
         if (filters?.notImported) params.append('notImported', 'true');
+        if (filters?.groupId) params.append('groupId', filters.groupId);
 
         const res = await fetch(`${API_BASE}/leads?${params.toString()}`);
         return res.json();
@@ -278,12 +292,52 @@ const localLeadsApi = {
 
     clear: async (): Promise<void> => {
         await fetch(`${API_BASE}/leads`, { method: 'DELETE' });
+    },
+
+    // Groups
+    getGroups: async (): Promise<LeadGroup[]> => {
+        const res = await fetch(`${API_BASE}/leads/groups`);
+        return res.json();
+    },
+
+    createGroup: async (name: string): Promise<LeadGroup> => {
+        const res = await fetch(`${API_BASE}/leads/groups`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        return res.json();
+    },
+
+    deleteGroup: async (id: string): Promise<void> => {
+        await fetch(`${API_BASE}/leads/groups/${id}`, { method: 'DELETE' });
+    },
+
+    assignToGroup: async (leadIds: string[], groupId: string): Promise<{ success: boolean }> => {
+        const res = await fetch(`${API_BASE}/leads/assign-group`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ leadIds, groupId })
+        });
+        return res.json();
+    },
+    
+    importFile: async (file: File, groupId?: string): Promise<{ success: boolean; count: number; totalExtracted: number }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (groupId) formData.append('groupId', groupId);
+        
+        const res = await fetch(`${API_BASE}/leads/import-file`, {
+            method: 'POST',
+            body: formData
+        });
+        return res.json();
     }
 };
 
 // ─── Gmaps Stub (runs locally only) ───────────────────────────
 export const firestoreGmapsApi = {
-    search: async () => ({
+    search: async (data: any) => ({
         success: false,
         jobId: '',
         message: 'Google Maps scraper disponível apenas em ambiente local',
@@ -291,24 +345,63 @@ export const firestoreGmapsApi = {
         location: '',
         maxResults: 0,
     }),
+    estimate: async (data: { query: string; location: string }): Promise<{ estimated_total: number; estimated_wa: number; preview_names: string[]; error?: string }> => ({
+        estimated_total: 0,
+        estimated_wa: 0,
+        preview_names: [],
+        error: 'Disponível apenas em ambiente local'
+    }),
     stop: async () => ({ success: false, stoppedCount: 0, message: 'N/A' }),
     getStatus: async () => ({ id: '', status: 'unavailable', output: [] as string[], error: undefined as string | undefined }),
     getJobs: async () => [] as Array<{ id: string; status: string; startedAt: string }>,
 };
 
+export const firestoreUploadApiFallback = {
+    uploadFile: async (file: File): Promise<{ success: boolean; fileUrl: string; fileName: string; fileMimeType: string }> => {
+        throw new Error('Upload is only supported via the local backend currently.');
+    }
+}
 
-
-// ─── Exported API (auto-selects based on environment) ─────────
 // ─── Exported API (auto-selects based on environment) ─────────
 const useBackend = !isProduction || !!import.meta.env.VITE_API_URL;
 
-export const missionsApi = isProduction ? firestoreMissionsApi : localMissionsApi;
+export const missionsApi = isProduction ? { ...firestoreMissionsApi, uploadFile: firestoreUploadApiFallback.uploadFile } : localMissionsApi;
 export const targetsApi = isProduction ? firestoreTargetsApi : localTargetsApi;
 export const agentApi = isProduction ? firestoreAgentApi : localAgentApi;
 
-// For Scraper and Gmaps, we MUST use the backend (REST) if available (localhost or VITE_API_URL).
-// Only fallback to Firestore (stub) if we are in production AND have no specified backend URL.
 export const scraperApi = useBackend ? localScraperApi : firestoreScraperApi;
 export const gmapsApi = useBackend ? localGmapsApi : firestoreGmapsApi;
-export const leadsApi = isProduction ? firestoreLeadsApi : localLeadsApi;
+export const webScraperApi = useBackend ? localWebScraperApi : { start: async () => ({ success: false, jobId: '', message: 'Web Scraper disponível apenas em ambiente local', targetUrl: '' }), stop: async () => ({ success: false, stoppedCount: 0, message: 'N/A' }), getStatus: async () => ({ id: '', status: 'unavailable', output: [] as string[], error: undefined as string | undefined }) };
 
+const firestoreLeadsApiStub = {
+    ...firestoreLeadsApi,
+    importFile: async (_file: File, _groupId?: string) => ({ success: false, count: 0, totalExtracted: 0, message: 'Upload de arquivo disponível apenas em ambiente local' })
+};
+
+export const leadsApi = isProduction ? firestoreLeadsApiStub : localLeadsApi;
+
+// ─── Evolution API (always local) ─────────────────────────────
+export const evolutionApi = {
+    getStatus: async (): Promise<{ connected: boolean; state: string; instanceName: string }> => {
+        const res = await fetch(`${API_BASE}/evolution/status`);
+        return res.json();
+    },
+
+    sendText: async (phone: string, message: string): Promise<{ success: boolean }> => {
+        const res = await fetch(`${API_BASE}/evolution/send-text`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, message }),
+        });
+        return res.json();
+    },
+
+    sendMedia: async (phone: string, mediaUrl: string, caption?: string): Promise<{ success: boolean }> => {
+        const res = await fetch(`${API_BASE}/evolution/send-media`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, mediaUrl, caption }),
+        });
+        return res.json();
+    }
+};
